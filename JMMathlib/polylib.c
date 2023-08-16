@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-
+#define N (int32_t)23
 #define POLY_DIM 5
 #define POLY_SPACE (POLY_DIM + 1)
 
@@ -16,16 +16,18 @@ typedef struct poly{
 
 /*** a^-1 mod b ****/
 int32_t inv_mod(int32_t a, int32_t b){
-
+	
+	
 	int32_t q, r;
 	int32_t d1 = 0;
 	int32_t d2 = 1;
 	int32_t d = -1;
 	int32_t space_mod = b;
+	a = (a > 0)? a: (a+b)%b;
 	while((b != 0) && (a != 1)){
 
-		q = a / b;
-		r = a % b;
+		q = b / a;
+		r = b % a;
 		b = a;
 		a = r;
 		d = d1 - (d2 * q);
@@ -103,9 +105,27 @@ void division_poly(poly_t* dividend, poly_t* division, poly_t* quotient, poly_t*
 	
 	while((dividend -> degree)>=(division -> degree)){
 	
-		int q_degree = (dividend -> degree) - (division -> degree);
+		int32_t q_degree = (dividend -> degree) - (division -> degree);
 		printf("\n --- quotient degree %d \n", q_degree);
-		quotient -> coef[q_degree] = q_degree;
+		//quotient -> coef[q_degree] = ((dividend -> coef[dividend->degree]) * (inv_mod((division->coef[division->degree]), N))) % N;
+		
+		
+		int32_t q = ((dividend->coef[dividend->degree]) * inv_mod((division->coef[division->degree]), N) % N);
+		quotient->coef[q_degree] = q;
+		printf("Q ret %d \n",quotient->coef[q_degree]);
+
+		
+		for(int i=0; i <= division->degree; ++i){
+
+			dividend -> coef[dividend -> degree - i] = ((dividend->coef[dividend -> degree - i]) - (q * division->coef[division->degree - i])) % N;
+			printf("%d \t", dividend -> coef[dividend -> degree - i]);
+
+
+		}
+
+
+
+		printf("\n");
 		
 		/****  dividend coef -= division * quotient ***/
 	       	(dividend -> degree)--;	
@@ -113,6 +133,7 @@ void division_poly(poly_t* dividend, poly_t* division, poly_t* quotient, poly_t*
 	}	
 	
 
+	print_poly(dividend);
 
 
 
@@ -133,6 +154,7 @@ void test_(int TEST_MODE){
 			printf("Enter b: \t");
 			scanf("%d", &b);
 			ret = inv_mod(a, b);
+			printf("a^-1 : %d \n", ret);
 			printf("----check-----\n");
 			printf("%d * %d mod %d = %d \n", a, ret, b, ((a * ret) % b));
 			break;
@@ -152,8 +174,8 @@ int main(void){
 
 
 	poly_t poly1, poly2, quotient, reminder;
-	int32_t poly1_coeff[] = {5, 5, 4, 2, 1};
-	int32_t poly2_coeff[] = {2, 2, 0, 0, 0};
+	int32_t poly1_coeff[] = {-1, 0, 0, 1, 0};
+	int32_t poly2_coeff[] = {1, 1, -1, 0, 0};
 
 	init_poly(&poly1, POLY_DIM - 1);
 	init_poly(&poly2, POLY_DIM - 1);
@@ -165,6 +187,10 @@ int main(void){
 
 	division_poly(&poly1, &poly2, &quotient, &reminder);
 	test_(0);
+
+
+
+	
 	free(poly1.coef);
 	free(poly2.coef);
 	free(quotient.coef);
