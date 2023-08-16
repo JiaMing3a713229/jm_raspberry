@@ -96,29 +96,48 @@ void print_poly(poly_t* _poly){
 
 }
 
-void division_poly(poly_t* dividend, poly_t* division, poly_t* quotient, poly_t* reminder){
-	
-	print_poly(dividend);
-	print_poly(division);
+void copy_poly(poly_t* dest, const poly_t* src) {
+    // 複製 degree
+    dest->degree = src->degree;
 
-	int i = 0;
+    // 為 coef 分配記憶體
+    dest->coef = (int32_t *)malloc((dest->degree + 1) * sizeof(int32_t));
+
+    // 確保記憶體分配成功
+    if (!dest->coef) {
+        printf("Memory allocation error!\n");
+    }
+
+    // 複製 coef 的值
+    for (int i = 0; i <= dest->degree; i++) {
+        dest->coef[i] = src->coef[i];
+    }
+}
+
+void division_poly(poly_t* _dividend, poly_t* _division, poly_t* _quotient, poly_t* _reminder){
 	
-	while((dividend -> degree)>=(division -> degree)){
+	print_poly(_dividend);
+	print_poly(_division);
+
 	
-		int32_t q_degree = (dividend -> degree) - (division -> degree);
-		printf("\n --- quotient degree %d \n", q_degree);
+	int32_t q_degree = (_dividend -> degree) - (_division -> degree);
+	_quotient->degree = q_degree;
+	int32_t j = 0;	
+	while((_dividend -> degree)>=(_division -> degree)){
+	
+		//printf("\n --- quotient degree %d \n", q_degree);
 		//quotient -> coef[q_degree] = ((dividend -> coef[dividend->degree]) * (inv_mod((division->coef[division->degree]), N))) % N;
 		
 		
-		int32_t q = ((dividend->coef[dividend->degree]) * inv_mod((division->coef[division->degree]), N) % N);
-		quotient->coef[q_degree] = q;
-		printf("Q ret %d \n",quotient->coef[q_degree]);
+		int32_t q = ((_dividend->coef[_dividend->degree]) * inv_mod((_division->coef[_division->degree]), N) % N);
+		_quotient->coef[q_degree - j] = q;
+		printf("Q ret %d \n",_quotient->coef[q_degree]);
 
 		
-		for(int i=0; i <= division->degree; ++i){
-
-			dividend -> coef[dividend -> degree - i] = ((dividend->coef[dividend -> degree - i]) - (q * division->coef[division->degree - i])) % N;
-			printf("%d \t", dividend -> coef[dividend -> degree - i]);
+		for(int i=0; i <= _division->degree; ++i){
+			
+			_dividend -> coef[_dividend -> degree - i] = ((_dividend->coef[_dividend -> degree - i]) - (q * _division->coef[_division->degree - i])) % N;
+			printf("%d \t", _dividend -> coef[_dividend -> degree - i]);
 
 
 		}
@@ -128,13 +147,45 @@ void division_poly(poly_t* dividend, poly_t* division, poly_t* quotient, poly_t*
 		printf("\n");
 		
 		/****  dividend coef -= division * quotient ***/
-	       	(dividend -> degree)--;	
+	       	(_dividend -> degree)--;
+		++j;	
 
 	}	
 	
+	//print_poly(_quotient);
+	//print_poly(dividend);
+	copy_poly(_reminder, _dividend);
+	//memcpy(_reminder, _dividend, sizeof(_dividend));
 
-	print_poly(dividend);
+}
 
+void multi_poly(poly_t _a, poly_t _b, poly_t* ret){
+	
+	
+
+}
+/*
+ *  poly_A ^ -1 mod (x^(N+1) -1));
+ */
+void exgcd_poly(poly_t* f){
+	
+	poly_t ring, quotient, reminder;
+	init_poly(&ring, f->degree + 1);
+	init_poly(&quotient, POLY_DIM - 1);
+	init_poly(&reminder, POLY_DIM - 1);
+
+	ring.degree = (f -> degree) + 1;
+	ring.coef[ring.degree] = 1;
+	ring.coef[0] = -1;
+
+	int32_t d1 = 0;
+	int32_t d2 = 1;
+	int32_t d = -1;
+
+	division_poly(&ring, f, &quotient, &reminder);	
+	print_poly(&quotient);
+	print_poly(&reminder);
+	
 
 
 
@@ -185,10 +236,10 @@ int main(void){
 	set_poly(&poly1, poly1_coeff);
 	set_poly(&poly2, poly2_coeff);
 
-	division_poly(&poly1, &poly2, &quotient, &reminder);
-	test_(0);
+	//division_poly(&poly1, &poly2, &quotient, &reminder);
+	//test_(0);
 
-
+	exgcd_poly(&poly2);
 
 	
 	free(poly1.coef);
