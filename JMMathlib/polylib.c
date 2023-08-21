@@ -6,6 +6,7 @@
 
 #define TEST_STATUS 1
 #define N (int32_t)23
+#define P (int32_t)3
 #define POLY_DIM (int32_t)3
 #define POLY_SPACE (POLY_DIM + 1)
 
@@ -95,7 +96,7 @@ void set_poly(poly_t* _poly, int32_t coef[]){
 void print_poly(poly_t* _poly){
 
 	printf("\n poly degree : %d----\t", _poly -> degree);
-	for(int i=0; i<= _poly -> degree; ++i){
+	for(int i=0; i< POLY_DIM; ++i){
 		
 		printf("%d \t", _poly->coef[i]);
 
@@ -395,6 +396,49 @@ void encrytp_ntru(poly_t* _pub_key, poly_t* _message, poly_t* _cipher_poly, int3
 
 }
 
+void modulo_poly(poly_t* _poly, int32_t _modulo){
+
+	while(_poly -> coef[_poly -> degree] == 0){
+		
+		(_poly -> degree)--;
+
+	}
+
+	for(int i = 0; i <= _poly->degree; ++i){
+
+		_poly -> coef[i] = (_poly -> coef[i] > (_modulo / 2)) ? (_poly -> coef[i] - _modulo) % _modulo : _poly -> coef[i] % _modulo;
+		_poly -> coef[i] = (_poly -> coef[i] < (-(_modulo) / 2)) ? (_poly -> coef[i] + _modulo) % _modulo : _poly -> coef[i] % _modulo;
+
+
+	}
+
+	print_poly(_poly);
+
+
+}
+
+void decrypt_ntru(poly_t* _f, poly_t* _f_p, poly_t* _cipher, poly_t* _plantext, int32_t _p, int32_t _q){
+
+	printf("--------------------Decrypt--------------------\r\n");
+	poly_t a_x, b_x;
+	init_poly(&a_x, POLY_DIM - 1);
+	init_poly(&b_x, POLY_DIM - 1);
+
+	multi_poly(_f, _cipher, &a_x, 23);
+	modulo_poly(&a_x, 23);
+	copy_poly(&b_x, &a_x);
+	modulo_poly(&a_x, 3);
+
+	//Decryption Arithmetic
+	
+	multi_poly(_f_p, &b_x, _plantext, 3);
+	modulo_poly(_plantext, 3);
+	
+
+
+
+}
+
 void test_(int TEST_MODE){
 
 	int32_t a, b;
@@ -440,8 +484,9 @@ int main(void){
 	poly_t pub_key;
 	poly_t message;
 	poly_t cipher;
+	poly_t plantext;
 
-	int32_t message_emcoding[] = {1, 0, 1};
+	int32_t message_emcoding[] = {0, 0, 0};
 	int32_t polyf_coeff[] = {1, 1, -1};
 	int32_t polyg_coeff[] = {1, -1, 0};
 
@@ -451,6 +496,7 @@ int main(void){
 	init_poly(&reminder, POLY_DIM - 1);
 	init_poly(&cipher, POLY_DIM - 1);
 	init_poly(&message, POLY_DIM -1);
+	init_poly(&plantext, POLY_DIM - 1);
 
 	
 	set_poly(&f_poly, polyf_coeff);
@@ -460,8 +506,8 @@ int main(void){
 	//division_poly(&poly1, &poly2, &quotient, &reminder);
 	//test_(0);
 
-	exgcd_poly(&f_poly, &f_p, 3);
-	exgcd_poly(&f_poly, &f_q, 23);
+	exgcd_poly(&f_poly, &f_p, P);
+	exgcd_poly(&f_poly, &f_q, N);
 	
 	if(TEST_STATUS){
 		
@@ -470,23 +516,25 @@ int main(void){
 		printf("f_q :\t");
 		print_poly(&f_q);
 
-		multi_poly(&f_poly, &f_p, &check_fp, 3);
-		multi_poly(&f_poly, &f_q, &check_fq, 23);
+		multi_poly(&f_poly, &f_p, &check_fp, P);
+		multi_poly(&f_poly, &f_q, &check_fq, N);
 
 		print_poly(&check_fp);
 		print_poly(&check_fq);
 
 	}
 	
-	generator_key(f_q, g_poly, &pub_key, 3, 23);
-	encrytp_ntru(&pub_key, &message, &cipher, 23);
+	generator_key(f_q, g_poly, &pub_key, P, N);
+	encrytp_ntru(&pub_key, &message, &cipher, N);
 
 
 
+	decrypt_ntru(&f_poly, &f_p, &cipher, &plantext, P, N);
+	printf("-----------------Decryption result-------------------\r\n");
+	print_poly(&plantext);
 
 
-
-
+	free(plantext.coef);
 	free(message.coef);
 	free(cipher.coef);
 	free(pub_key.coef);
