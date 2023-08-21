@@ -104,10 +104,13 @@ void print_poly(poly_t* _poly){
 
 }
 
-void copy_poly(poly_t* dest, const poly_t* src) {
+void copy_poly(poly_t* dest, poly_t* src) {
     // 複製 degree
-    dest->degree = src->degree;
+    while(src->coef[src->degree] == 0){
+    	(src -> degree)--;
+    }
 
+    dest -> degree = src -> degree;
     // 為 coef 分配記憶體
     dest->coef = (int32_t *)malloc((dest->degree + 1) * sizeof(int32_t));
 
@@ -241,6 +244,22 @@ void sub_poly(poly_t* _a, poly_t* _b, poly_t* ret, int32_t _modulo){
 
 }
 
+void add_poly(poly_t* _a, poly_t* _b, poly_t* ret, int32_t _modulo){
+	
+	if(TEST_STATUS){
+		printf("---------------------add poly-------------------\r\n");
+		print_poly(_a);
+		print_poly(_b);
+	}
+	ret -> degree = ((_a -> degree) >= (_b -> degree)) ? _a -> degree : _b -> degree;
+
+	for(int i = 0; i <= ret->degree; ++i){
+
+		ret -> coef[i] = (_a -> coef[i] + _b -> coef[i]) % _modulo;
+	}	
+
+}
+
 int8_t check_exgcd(poly_t* _a){
 	
 	if((_a -> degree) == 0 && (_a -> coef[0] == 1)){
@@ -286,8 +305,14 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 	while(check_exgcd(&f) != 1){
 
 		division_poly(&ring, &f, &quotient, &reminder, _modulo);	
-		print_poly(&quotient);
-		print_poly(&reminder);
+
+		if(TEST_STATUS){
+			printf("------------------exgcd round:------------------ \r\n");
+			printf("quotient:\t");	
+			print_poly(&quotient);
+			printf("reminder:\t");
+			print_poly(&reminder);
+		}
 	
 		multi_poly(&d2, &quotient, &d, _modulo);
 		sub_poly(&d1, &d, &ret, _modulo);
@@ -298,7 +323,6 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 		copy_poly(&d1, &d2);
 		copy_poly(&d2, &d);
 		if(TEST_STATUS){
-			printf("------------------exgcd round:------------------ \r\n");	
 			printf("poly ring:\t");
 			print_poly(&ring);
 			printf("poly f:\t");
@@ -318,6 +342,54 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 	}
 	copy_poly(_ret , &d2);
 	
+	if(TEST_STATUS){
+		printf("***********************************************************\r\n");
+	}
+
+
+}
+
+void generator_key(poly_t f_q, poly_t g_poly, poly_t* ret, int32_t _p, int32_t _modulo){
+
+
+	poly_t _p_poly, ret1, ret2;
+	init_poly(&_p_poly, POLY_DIM -1);
+	int32_t p_coef[] = {_p, 0, 0};
+	set_poly(&_p_poly, p_coef);
+	multi_poly(&_p_poly, &f_q, &ret1, _modulo);
+	multi_poly(&ret1, &g_poly, &ret2, _modulo);
+
+	copy_poly(ret, &ret2);
+	print_poly(ret);
+
+
+
+
+
+}
+
+void encrytp_ntru(poly_t* _pub_key, poly_t* _message, poly_t* _cipher_poly, int32_t _modulo){
+	
+	if(TEST_STATUS){
+		printf("----------Encryption NTRU------------\r\n");
+		printf("public key:");
+		print_poly(_pub_key);
+		printf("message");
+		print_poly(_message);
+
+	}	
+    	poly_t r_x, temp;
+	int32_t r_coef[] = {1, -1, 0};
+	init_poly(&r_x, POLY_DIM -1);
+	init_poly(&temp, POLY_DIM -1);
+
+	set_poly(&r_x, r_coef);
+
+	multi_poly(_pub_key, &r_x, &temp, 23);
+	add_poly(&temp, _message, _cipher_poly, 23);
+
+	print_poly(_cipher_poly);
+
 
 
 
@@ -360,26 +432,36 @@ void test_(int TEST_MODE){
 int main(void){
 
 
-	poly_t poly1, poly2, quotient, reminder;
+	poly_t f_poly, quotient, reminder;
 	poly_t f_p;
 	poly_t f_q;
 	poly_t check_fp, check_fq;
-	int32_t poly1_coeff[] = {1, 1, 2};
-	int32_t poly2_coeff[] = {-1, 1, 1};
+	poly_t g_poly;
+	poly_t pub_key;
+	poly_t message;
+	poly_t cipher;
 
-	init_poly(&poly1, POLY_DIM - 1);
-	init_poly(&poly2, POLY_DIM - 1);
+	int32_t message_emcoding[] = {1, 0, 1};
+	int32_t polyf_coeff[] = {1, 1, -1};
+	int32_t polyg_coeff[] = {1, -1, 0};
+
+	init_poly(&f_poly, POLY_DIM - 1);
+	init_poly(&g_poly, POLY_DIM - 1);
 	init_poly(&quotient, POLY_DIM - 1);
 	init_poly(&reminder, POLY_DIM - 1);
+	init_poly(&cipher, POLY_DIM - 1);
+	init_poly(&message, POLY_DIM -1);
+
 	
-	set_poly(&poly1, poly1_coeff);
-	set_poly(&poly2, poly2_coeff);
+	set_poly(&f_poly, polyf_coeff);
+	set_poly(&g_poly, polyg_coeff);
+	set_poly(&message, message_emcoding);
 
 	//division_poly(&poly1, &poly2, &quotient, &reminder);
 	//test_(0);
 
-	exgcd_poly(&poly2, &f_p, 3);
-	exgcd_poly(&poly2, &f_q, 23);
+	exgcd_poly(&f_poly, &f_p, 3);
+	exgcd_poly(&f_poly, &f_q, 23);
 	
 	if(TEST_STATUS){
 		
@@ -388,21 +470,30 @@ int main(void){
 		printf("f_q :\t");
 		print_poly(&f_q);
 
-		multi_poly(&poly2, &f_p, &check_fp, 3);
-		multi_poly(&poly2, &f_q, &check_fq, 23);
+		multi_poly(&f_poly, &f_p, &check_fp, 3);
+		multi_poly(&f_poly, &f_q, &check_fq, 23);
 
 		print_poly(&check_fp);
 		print_poly(&check_fq);
 
 	}
 	
-	//multi_poly(&poly1, &poly2, &multi_ret);
-	
+	generator_key(f_q, g_poly, &pub_key, 3, 23);
+	encrytp_ntru(&pub_key, &message, &cipher, 23);
 
+
+
+
+
+
+
+	free(message.coef);
+	free(cipher.coef);
+	free(pub_key.coef);
 	free(f_p.coef);
 	free(f_q.coef);
-	free(poly1.coef);
-	free(poly2.coef);
+	free(f_poly.coef);
+	free(g_poly.coef);
 	free(quotient.coef);
 	free(reminder.coef);
 	
