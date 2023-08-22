@@ -7,7 +7,7 @@
 #define TEST_STATUS 1
 #define N (int32_t)23
 #define P (int32_t)3
-#define POLY_DIM (int32_t)3
+#define POLY_DIM (int32_t)7
 #define POLY_SPACE (POLY_DIM + 1)
 
 typedef struct poly{
@@ -84,46 +84,59 @@ void set_poly(poly_t* _poly, int32_t coef[]){
 			cheak_mode = 0;
 		}
 	}
-
+	/*
 	printf("\n set_poly degree: %d \r\n", _poly->degree);
 	for(int i=0; i<=_poly->degree; ++i){
 		printf("%d \t", _poly->coef[i]);
 	}
 	printf("\r\n");
+	*/
 
 }
 
 void print_poly(poly_t* _poly){
 
 	printf("\n poly degree : %d----\t", _poly -> degree);
-	for(int i=0; i< POLY_DIM; ++i){
-		
-		printf("%d \t", _poly->coef[i]);
 
+	if(_poly -> degree >= POLY_DIM){
+		for(int i=0; i<= _poly->degree; ++i){
+			printf("%d \t", _poly -> coef[i]);
+		}
+
+	}
+	else{
+		for(int i=0; i < POLY_DIM; ++i){
+		
+			printf("%d \t", _poly->coef[i]);
+
+		}
 	}
 	printf("\r\n");
 
 }
 
 void copy_poly(poly_t* dest, poly_t* src) {
-    // 複製 degree
-    while(src->coef[src->degree] == 0){
-    	(src -> degree)--;
-    }
 
-    dest -> degree = src -> degree;
-    // 為 coef 分配記憶體
-    dest->coef = (int32_t *)malloc((dest->degree + 1) * sizeof(int32_t));
+	init_poly(dest, POLY_DIM - 1);
+    	// 複製 degree
+   	dest -> degree = src -> degree;
+    	// 為 coef 分配記憶體
+    	//dest -> coef = (int32_t *)malloc((POLY_DIM) * sizeof(int32_t));
 
-    // 確保記憶體分配成功
-    if (!dest->coef) {
-        printf("Memory allocation error!\n");
-    }
+    	// 確保記憶體分配成功
+    	if (!dest->coef) {
+        	printf("Memory allocation error!\n");
+    	}
+    	// 複製 coef 的值
+    	for (int i = 0; i <= dest->degree; i++) {
+        	dest->coef[i] = src->coef[i];
+    	}
+	
+	while((dest -> coef[dest -> degree] == 0) && dest -> degree > 0){
+	
+		dest -> degree--;
 
-    // 複製 coef 的值
-    for (int i = 0; i <= dest->degree; i++) {
-        dest->coef[i] = src->coef[i];
-    }
+    	}
 }
 
 void division_poly(poly_t* _dividend, poly_t* _division, poly_t* _quotient, poly_t* _reminder, int32_t _modulo){
@@ -134,6 +147,10 @@ void division_poly(poly_t* _dividend, poly_t* _division, poly_t* _quotient, poly
 		print_poly(_dividend);
 		printf("division:\t");
 		print_poly(_division);
+		printf("quotient:\t");
+		print_poly(_quotient);
+		printf("reminder:\t");
+		print_poly(_reminder);
 	}
 	int32_t q_degree = (_dividend -> degree) - (_division -> degree);
 	_quotient->degree = q_degree;
@@ -173,6 +190,7 @@ void division_poly(poly_t* _dividend, poly_t* _division, poly_t* _quotient, poly
 		print_poly(_dividend);
 	}
 	copy_poly(_reminder, _dividend);
+	print_poly(_reminder);
 	//memcpy(_reminder, _dividend, sizeof(_dividend));
 	//printf("-------------------------------------------------\r\n");
 
@@ -207,6 +225,12 @@ void multi_poly(poly_t* _a, poly_t* _b, poly_t *ret, int32_t _modulo){
 			printf("ret[%d]=%d \t", index, ret -> coef[(i + j) % POLY_DIM]);
 		}
 		printf("\n");
+	}
+	
+	print_poly(ret);
+	while(ret -> coef[ret -> degree] == 0){
+
+		--(ret -> degree); 
 	}
 	
 	if(TEST_STATUS){
@@ -261,8 +285,9 @@ void add_poly(poly_t* _a, poly_t* _b, poly_t* ret, int32_t _modulo){
 
 }
 
-int8_t check_exgcd(poly_t* _a){
+int8_t check_exgcd(poly_t* _a, int32_t _modulo){
 	
+	_a -> coef[0] = (_a -> coef[0] > 0) ? _a -> coef[0] : (_a -> coef[0] % _modulo) + _modulo;	
 	if((_a -> degree) == 0 && (_a -> coef[0] == 1)){
 		
 		return 1;
@@ -281,6 +306,7 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 
 	poly_t ring, quotient, reminder;
 	poly_t ret;
+
 	init_poly(&ring, POLY_DIM);
 	init_poly(&quotient, POLY_DIM - 1);
 	init_poly(&reminder, POLY_DIM - 1);
@@ -292,8 +318,8 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 	ring.coef[0] = -1;
 
 	poly_t d1,d2,d;
-	int32_t d1_coef[] = {0, 0, 0};
-	int32_t d2_coef[] = {1, 0, 0};
+	int32_t d1_coef[] = {0, 0, 0, 0, 0, 0, 0};
+	int32_t d2_coef[] = {1, 0, 0, 0, 0, 0, 0};
 	
 	init_poly(&d1, POLY_DIM - 1);
 	init_poly(&d2, POLY_DIM - 1);
@@ -303,7 +329,7 @@ void exgcd_poly(poly_t* _f,poly_t* _ret, int32_t _modulo){
 
 
 	//擴展歐幾里得
-	while(check_exgcd(&f) != 1){
+	while(check_exgcd(&f, _modul:) != 1){
 
 		division_poly(&ring, &f, &quotient, &reminder, _modulo);	
 
@@ -355,7 +381,7 @@ void generator_key(poly_t f_q, poly_t g_poly, poly_t* ret, int32_t _p, int32_t _
 
 	poly_t _p_poly, ret1, ret2;
 	init_poly(&_p_poly, POLY_DIM -1);
-	int32_t p_coef[] = {_p, 0, 0};
+	int32_t p_coef[] = {_p, 0, 0, 0, 0, 0, 0};
 	set_poly(&_p_poly, p_coef);
 	multi_poly(&_p_poly, &f_q, &ret1, _modulo);
 	multi_poly(&ret1, &g_poly, &ret2, _modulo);
@@ -380,7 +406,7 @@ void encrytp_ntru(poly_t* _pub_key, poly_t* _message, poly_t* _cipher_poly, int3
 
 	}	
     	poly_t r_x, temp;
-	int32_t r_coef[] = {1, -1, 0};
+	int32_t r_coef[] = {1, -1, 0, 1, 1, 1, 1};
 	init_poly(&r_x, POLY_DIM -1);
 	init_poly(&temp, POLY_DIM -1);
 
@@ -486,9 +512,9 @@ int main(void){
 	poly_t cipher;
 	poly_t plantext;
 
-	int32_t message_emcoding[] = {0, 0, 0};
-	int32_t polyf_coeff[] = {1, 1, -1};
-	int32_t polyg_coeff[] = {1, -1, 0};
+	int32_t message_emcoding[] = {1, 1, 1, 0, 0, 0, 0};
+	int32_t polyf_coeff[] = {-1, 1, -1, 1, 0, 1, 1};
+	int32_t polyg_coeff[] = {1, -1, 0, 1, -1, 1, 1};
 
 	init_poly(&f_poly, POLY_DIM - 1);
 	init_poly(&g_poly, POLY_DIM - 1);
@@ -497,6 +523,8 @@ int main(void){
 	init_poly(&cipher, POLY_DIM - 1);
 	init_poly(&message, POLY_DIM -1);
 	init_poly(&plantext, POLY_DIM - 1);
+	init_poly(&f_p, POLY_DIM - 1);
+	init_poly(&f_q, POLY_DIM - 1);
 
 	
 	set_poly(&f_poly, polyf_coeff);
@@ -507,8 +535,8 @@ int main(void){
 	//test_(0);
 
 	exgcd_poly(&f_poly, &f_p, P);
-	exgcd_poly(&f_poly, &f_q, N);
-	
+	//exgcd_poly(&f_poly, &f_q, N);
+		
 	if(TEST_STATUS){
 		
 		printf("f_p :\t");
@@ -524,6 +552,7 @@ int main(void){
 
 	}
 	
+	/*
 	generator_key(f_q, g_poly, &pub_key, P, N);
 	encrytp_ntru(&pub_key, &message, &cipher, N);
 
@@ -531,9 +560,11 @@ int main(void){
 
 	decrypt_ntru(&f_poly, &f_p, &cipher, &plantext, P, N);
 	printf("-----------------Decryption result-------------------\r\n");
+	printf("plantext:\t");
 	print_poly(&plantext);
 
-
+	printf("--------------------free memory----------------------\r\n");
+	*/
 	free(plantext.coef);
 	free(message.coef);
 	free(cipher.coef);
